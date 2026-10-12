@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Job Tracker</title>
+<style>
+/* Colours live here. Change them once and the whole app updates. */
+:root {
+  --bg:#f1f4f6; --surface:#ffffff; --ink:#16222c; --muted:#5a6a77; --line:#d5dde3;
+  --brand:#0b6e8a; --brand-ink:#ffffff; --track:#e3e9ed;
+  --s-applied:#4f6d8f; --s-interviewing:#b97d0b; --s-offer:#2b8656; --s-rejected:#b5483f;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0f171d; --surface:#17222b; --ink:#e6edf2; --muted:#9fb0bd; --line:#2b3a46;
+    --brand:#4cb6d4; --brand-ink:#06232d; --track:#223240;
+    --s-applied:#7f9cc0; --s-interviewing:#e0a93a; --s-offer:#4fc085; --s-rejected:#e07b70;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0f171d; --surface:#17222b; --ink:#e6edf2; --muted:#9fb0bd; --line:#2b3a46;
+  --brand:#4cb6d4; --brand-ink:#06232d; --track:#223240;
+  --s-applied:#7f9cc0; --s-interviewing:#e0a93a; --s-offer:#4fc085; --s-rejected:#e07b70;
+}
+html { scroll-padding-top:env(safe-area-inset-top,0px); }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--font); line-height:1.5; }
+.wrap { width:min(1040px,100% - 2rem); margin-inline:auto; padding:2rem 0 3rem; }
+h1 { font-size:clamp(1.8rem,4vw,2.6rem); margin:0; letter-spacing:-.02em; }
+.brand { display:flex; align-items:center; gap:.85rem; margin-bottom:.4rem; }
+.logo { width:clamp(40px,6vw,54px); height:auto; flex:none; }
+.logo .bg { fill:var(--brand); }
+.logo .ln { fill:none; stroke:var(--brand-ink); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+h2,h3,p { margin:0; }
+.sub { color:var(--muted); max-width:60ch; }
+:focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
+
+/* Summary */
+.summary { margin:1.75rem 0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1.25rem 1.4rem; }
+.stats { display:flex; flex-wrap:wrap; gap:1rem 2.5rem; margin-bottom:1rem; }
+.stats b { display:block; font-size:2rem; line-height:1.1; }
+.stats span { color:var(--muted); font-size:.92rem; }
+.bar { display:flex; height:14px; border-radius:7px; overflow:hidden; background:var(--track); gap:2px; }
+.bar span { min-width:6px; }
+.legend { list-style:none; display:flex; flex-wrap:wrap; gap:.4rem 1.4rem; margin:.9rem 0 0; padding:0; font-size:.92rem; }
+.legend i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:.4rem; }
+
+/* Layout */
+.layout { display:grid; grid-template-columns:330px 1fr; gap:1.5rem; align-items:start; }
+.panel { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1.25rem; position:sticky; top:1rem; }
+.panel h2 { font-size:1.15rem; margin-bottom:1rem; }
+label,.legend-label { display:block; font-size:.9rem; font-weight:600; margin:.9rem 0 .3rem; }
+input,select,button { font:inherit; color:inherit; }
+input[type=text],input[type=date],input[type=datetime-local],input[type=search],select {
+  width:100%; padding:.6rem .7rem; border:1px solid var(--line); border-radius:8px; background:var(--bg);
+}
+.seg { display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+.seg label { flex:1; margin:0; text-align:center; font-weight:500; cursor:pointer; }
+.seg input { position:absolute; opacity:0; pointer-events:none; }
+.seg span { display:block; padding:.55rem; }
+.seg input:checked + span { background:var(--brand); color:var(--brand-ink); font-weight:700; }
+.seg input:focus-visible + span { outline:3px solid var(--brand); outline-offset:-3px; }
+.primary { width:100%; margin-top:1.2rem; padding:.7rem; border:0; border-radius:8px; background:var(--brand); color:var(--brand-ink); font-weight:700; cursor:pointer; }
+.primary:hover { filter:brightness(1.08); }
+
+/* List */
+.toolbar { display:flex; gap:.75rem; margin-bottom:.75rem; }
+.toolbar { flex-wrap:wrap; }
+.toolbar input { flex:1 1 12rem; width:auto; }
+.toolbar select { flex:0 1 11rem; width:auto; }
+.trend { margin-top:1.1rem; }
+.trend p { font-size:.85rem; color:var(--muted); margin-top:.4rem; }
+.weeks { display:flex; align-items:flex-end; gap:6px; max-width:320px; }
+.wk { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:2px; }
+.wk small { font-size:.72rem; color:var(--muted); }
+.wk i { display:block; width:100%; background:var(--brand); border-radius:3px 3px 0 0; }
+#count { color:var(--muted); font-size:.92rem; margin-bottom:.75rem; }
+.item { display:flex; justify-content:space-between; gap:1rem; align-items:center; background:var(--surface);
+  border:1px solid var(--line); border-left:6px solid var(--c); border-radius:10px; padding:.9rem 1.1rem; margin-bottom:.7rem; }
+.item h3 { font-size:1.08rem; }
+.role { color:var(--muted); }
+.meta { display:flex; flex-wrap:wrap; gap:.2rem .9rem; font-size:.85rem; color:var(--muted); margin-top:.35rem; }
+.chip { border:1px solid var(--c); color:var(--c); border-radius:999px; padding:0 .55rem; font-weight:600; }
+.actions { display:flex; flex-direction:column; gap:.4rem; align-items:stretch; min-width:9.5rem; }
+.actions select { border-color:var(--c); font-weight:600; padding:.45rem .6rem; }
+.del { border:1px solid var(--line); background:transparent; border-radius:8px; padding:.35rem; cursor:pointer; color:var(--muted); font-size:.88rem; }
+.del:hover,.del[data-armed] { border-color:var(--s-rejected); color:var(--s-rejected); }
+.empty { text-align:center; padding:2.5rem 1rem; border:1px dashed var(--line); border-radius:12px; color:var(--muted); }
+.empty button { margin-top:.9rem; border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:.5rem .9rem; cursor:pointer; }
+
+.form-error { color:var(--s-rejected); font-size:.92rem; font-weight:600; margin-top:.9rem; }
+.form-error:empty { display:none; }
+
+textarea { width:100%; padding:.6rem .7rem; border:1px solid var(--line); border-radius:8px; background:var(--bg); font:inherit; resize:vertical; }
+.edit { border:1px solid var(--line); background:transparent; border-radius:8px; padding:.35rem; cursor:pointer; color:var(--muted); font-size:.88rem; }
+.edit:hover { border-color:var(--brand); color:var(--brand); }
+.notes { margin-top:.45rem; font-size:.88rem; color:var(--muted); white-space:pre-wrap; max-width:60ch; }
+.item a { color:var(--brand); }
+.cal { margin-top:.2rem; }
+#cancelEdit { width:100%; margin-top:.6rem; }
+.panel.editing { border-color:var(--brand); box-shadow:0 0 0 2px var(--brand); }
+
+/* Backup */
+.backup-wrap { padding-top:0; }
+.backup { border-top:1px solid var(--line); padding-top:1.25rem; color:var(--muted); font-size:.92rem; max-width:70ch; }
+.backup .row { display:flex; flex-wrap:wrap; gap:.6rem; margin:.7rem 0; }
+.ghost { border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:8px; padding:.5rem .95rem; cursor:pointer; }
+.ghost:hover { border-color:var(--brand); }
+
+/* Interviews, countdown, reminders */
+.link { border:0; background:none; color:var(--brand); cursor:pointer; padding:0; font-size:.85rem; text-decoration:underline; }
+.interview { display:flex; flex-wrap:wrap; align-items:center; gap:.3rem .9rem; margin-top:.5rem; font-size:.88rem; }
+.timer { color:var(--brand); font-variant-numeric:tabular-nums; }
+.timer.over { color:var(--muted); font-weight:400; }
+.item .int-input { width:auto; max-width:100%; padding:.4rem .5rem; }
+.next { margin:.9rem 0 1rem; padding:.7rem .9rem; border-radius:8px; background:var(--track); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.3rem 1rem; }
+.next:empty { display:none; }
+.next .big { font-weight:700; font-size:1.15rem; color:var(--brand); font-variant-numeric:tabular-nums; }
+.notify { color:var(--muted); font-size:.9rem; margin:-.5rem 0 1.25rem; max-width:70ch; }
+#toasts { position:fixed; left:1rem; right:1rem; bottom:calc(1rem + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; align-items:flex-end; gap:.6rem; z-index:10; pointer-events:none; }
+.toast { pointer-events:auto; max-width:360px; background:var(--surface); border:1px solid var(--line); border-left:6px solid var(--s-interviewing); border-radius:10px; padding:.8rem 1rem; box-shadow:0 8px 24px rgba(0,0,0,.22); display:flex; gap:.9rem; align-items:flex-start; }
+.toast p { color:var(--muted); font-size:.9rem; }
+
+@media (max-width:820px) {
+  .layout { grid-template-columns:1fr; }
+  .panel { position:static; }
+  .item { flex-direction:column; align-items:stretch; }
+  .actions { flex-direction:row; min-width:0; }
+  .actions select { flex:1; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <!-- Logo: a briefcase with a tick, for jobs you are keeping track of -->
+      <svg class="logo" viewBox="0 0 48 48" role="img" aria-label="Job Tracker logo">
+        <rect class="bg" width="48" height="48" rx="12"/>
+        <path class="ln" d="M18 16v-2a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2"/>
+        <rect class="ln" x="10" y="16" width="28" height="21" rx="4"/>
+        <path class="ln" d="M18.5 27l4 4 7.5-8"/>
+      </svg>
+      <h1>Job Tracker</h1>
+    </div>
+    <p class="sub">Keep every application, referral and status in one place. Your list is saved in this browser, on this device.</p>
+  </header>
+
+  <section class="summary" aria-label="Summary">
+    <div class="stats">
+      <div><b id="total">0</b><span>applications</span></div>
+      <div><b id="companies">0</b><span>companies</span></div>
+      <div><b id="week">0</b><span>applied in the last 7 days</span></div>
+      <div title="Applications with an interview date, or with status Interviewing or Offer"><b id="reached">0</b><span>reached interview stage</span></div>
+    </div>
+    <div class="next" id="next"></div>
+    <div class="bar" id="bar" role="img" aria-label="Applications by status"></div>
+    <ul class="legend" id="legend"></ul>
+    <div class="trend">
+      <div class="weeks" id="weeks" role="img" aria-label="Applications per week over the last 6 weeks"></div>
+      <p>Applications per week, last 6 weeks (this week on the right)</p>
+    </div>
+  </section>
+
+  <p class="notify" id="notifyBar"></p>
+
+  <div class="layout">
+
+    <div class="panel" id="add" role="group" aria-labelledby="addTitle">
+      <h2 id="addTitle">Add an application</h2>
+
+      <label for="company">Company</label>
+      <input type="text" id="company" required autocomplete="off">
+
+      <label for="role">Role</label>
+      <input type="text" id="role" required autocomplete="off">
+
+      <div class="legend-label">How did you apply?</div>
+      <div class="seg">
+        <label><input type="radio" name="type" value="Online" checked><span>Online</span></label>
+        <label><input type="radio" name="type" value="Referral"><span>Referral</span></label>
+      </div>
+
+      <label for="source" id="sourceLabel">Portal or website</label>
+      <input type="text" id="source" autocomplete="off" placeholder="LinkedIn, Naukri, company site">
+
+      <label for="date">Date applied</label>
+      <input type="date" id="date" required>
+
+      <label for="status">Status</label>
+      <select id="status"></select>
+
+      <label for="interview">Interview date and time (optional)</label>
+      <input type="datetime-local" id="interview">
+
+      <label for="link">Job link (optional)</label>
+      <input type="text" id="link" autocomplete="off" placeholder="https://company.com/jobs/123">
+
+      <label for="notes">Notes (optional)</label>
+      <textarea id="notes" rows="3" maxlength="500" placeholder="Recruiter name, salary range, what to prepare"></textarea>
+
+      <p class="form-error" id="formError" role="alert"></p>
+      <button class="primary" type="button" id="addBtn">Add application</button>
+      <button class="ghost" type="button" id="cancelEdit" hidden>Cancel editing</button>
+    </div>
+
+    <section>
+      <div class="toolbar">
+        <input type="search" id="q" placeholder="Search by company" aria-label="Search by company">
+        <select id="filter" aria-label="Filter by status"></select>
+        <select id="sort" aria-label="Sort applications"></select>
+      </div>
+      <p id="count" aria-live="polite"></p>
+      <div id="list"></div>
+    </section>
+
+  </div>
+</div>
+
+<footer class="wrap backup-wrap">
+  <div class="backup">
+    <p>Your list is saved in this browser only. Export a backup file to keep it safe or to move it to another device, and import it there.</p>
+    <div class="row">
+      <button type="button" class="ghost" id="export">Export backup</button>
+      <button type="button" class="ghost" id="import">Import backup</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+    <p id="backupMsg" role="status"></p>
+  </div>
+</footer>
+
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+/* ---------- Data ----------
+   Applications are stored in an object keyed by ID, like the HashMap in the Java project.
+   The company count uses a Set, like the HashSet, so each company is counted once. */
+const KEY = 'jobtracker.v1';
+const STATUSES = ['Applied', 'Interviewing', 'Offer', 'Rejected'];
+const colour = s => 'var(--s-' + s.toLowerCase() + ')';
+
+let db = { nextId: 1, apps: {} };
+let query = '', filter = 'All', editingId = null, sortBy = 'added';
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) { const d = JSON.parse(raw); if (d && d.apps) db = d; }
+  } catch (e) { /* storage unavailable: start empty */ }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* ignore */ }
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = id => document.getElementById(id);
+const today = () => new Date().toISOString().slice(0, 10);
+const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+/* ---------- Interviews, countdown and reminders ----------
+   Each application can hold an interview date and time. A timer ticks every second.
+   REMINDERS lists when to warn you (biggest first). Add another line to get another reminder. */
+const REMINDERS = [{ ms: 24 * 3600e3, label: '1 day' }, { ms: 3600e3, label: '1 hour' }];
+const when = a => a.interview ? new Date(a.interview).getTime() : NaN;
+const fmtTime = v => new Date(v).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const nowLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+// Reminders already past when the time is set count as done, so you are not warned about the past
+const crossedAt = v => { const left = new Date(v).getTime() - Date.now(); return v ? REMINDERS.filter(r => left <= r.ms).map(r => r.ms) : []; };
+
+function countdown(ms) {
+  const s = Math.floor(ms / 1000), p = n => String(n).padStart(2, '0');
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return (d ? d + 'd ' : '') + p(h) + 'h ' + p(m) + 'm ' + p(s % 60) + 's';
+}
+
+function interviewRow(id, a) {
+  if (editingId === id) {
+    return `<div class="interview"><input type="datetime-local" class="int-input" value="${esc(a.interview || '')}" min="${nowLocal()}" aria-label="Interview date and time for ${esc(a.company)}">
+      <button type="button" class="link save-int">Save</button><button type="button" class="link cancel-int">Cancel</button></div>`;
+  }
+  if (!a.interview) return '<div class="interview"><button type="button" class="link set-int">Set interview date</button></div>';
+  return `<div class="interview"><span>Interview: ${fmtTime(a.interview)}</span><b class="timer" data-t="${when(a)}"></b>
+    <button type="button" class="link set-int">Change</button><button type="button" class="link clear-int">Clear</button></div>${calRow(a)}`;
+}
+
+function updateTimers(now) {
+  document.querySelectorAll('.timer').forEach(el => {
+    const left = +el.dataset.t - now;
+    el.textContent = left > 0 ? countdown(left) + ' to go' : 'time has passed';
+    el.classList.toggle('over', left <= 0);
+  });
+}
+
+function renderNext(now) {
+  const up = Object.values(db.apps).filter(a => when(a) > now && a.status !== 'Rejected').sort((a, b) => when(a) - when(b))[0];
+  $('next').innerHTML = up ? `<span>Next interview: <b>${esc(up.company)}</b>, ${esc(up.role)}</span><span class="big">${countdown(when(up) - now)}</span>` : '';
+}
+
+function toast(title, body) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<div><b>${esc(title)}</b><p>${esc(body)}</p></div><button type="button" class="link">Dismiss</button>`;
+  el.querySelector('button').onclick = () => el.remove();
+  $('toasts').appendChild(el);   // stays until you dismiss it, so you cannot miss it
+}
+
+const perm = () => { try { return 'Notification' in window ? Notification.permission : 'unsupported'; } catch (e) { return 'unsupported'; } };
+function notify(title, body) {
+  toast(title, body);
+  try { if (perm() === 'granted') new Notification(title, { body }); } catch (e) { /* page pop-up still shown */ }
+}
+function askPermission() {
+  try { if (perm() === 'default') Notification.requestPermission().then(renderNotifyBar, renderNotifyBar); } catch (e) { /* ignore */ }
+}
+function renderNotifyBar() {
+  const p = perm();
+  $('notifyBar').innerHTML = p === 'granted'
+    ? 'Reminders are on: you get a pop-up and a browser notification 1 day and 1 hour before each interview, while this page is open.'
+    : 'Reminders pop up here 1 day and 1 hour before each interview, while this page is open.' +
+      (p === 'default' ? ' <button type="button" class="link" id="enableNotify">Turn on browser notifications</button>' : '');
+}
+
+function checkReminders(now) {
+  let changed = false;
+  for (const a of Object.values(db.apps)) {
+    const left = when(a) - now;
+    if (!(left > 0) || a.status === 'Rejected') continue;
+    const crossed = REMINDERS.filter(r => left <= r.ms);
+    if (!crossed.some(r => !(a.notified || []).includes(r.ms))) continue;
+    a.notified = crossed.map(r => r.ms); changed = true;
+    const r = crossed[crossed.length - 1];   // the most urgent one that applies
+    notify(a.company + ': less than ' + r.label + ' to go', a.role + ', interview ' + fmtTime(a.interview));
+  }
+  if (changed) save();
+}
+
+function tick() { const now = Date.now(); updateTimers(now); renderNext(now); checkReminders(now); }
+
+/* ---------- Links, files and calendar ---------- */
+function cleanLink(v) {   // '' = none, null = invalid; only http(s) links are ever accepted
+  v = String(v || '').trim().slice(0, 500);
+  if (!v) return '';
+  try { const u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(v) ? v : 'https://' + v); return /^https?:$/.test(u.protocol) ? u.href : null; }
+  catch (e) { return null; }
+}
+
+async function saveFile(name, text, mime) {   // 'saved' | 'downloaded' | 'declined' | 'unsupported'
+  try {   // inside Claude the viewer confirms the save; on your own website this is skipped
+    const dl = window.claude ? await window.claude.use('downloads') : null;
+    if (dl) {
+      try { await dl.save({ filename: name, data: text }); return 'saved'; }
+      catch (e) {
+        if (e && e.code === 'declined') return 'declined';
+        if (e && (e.code === 'rejected_extension' || e.code === 'extension_not_enabled')) return 'unsupported';
+      }
+    }
+  } catch (e) { /* use a normal download */ }
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return 'downloaded';
+}
+
+const utc = ms => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+const icsText = t => String(t).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+const fold = l => { const o = []; while (l.length > 72) { o.push(l.slice(0, 72)); l = ' ' + l.slice(72); } o.push(l); return o.join('\r\n'); };
+const details = a => [a.role, a.link, a.notes].filter(Boolean).join('\n');
+
+function gcalUrl(a) {
+  const t = when(a);
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Interview: ' + a.company) +
+    '&dates=' + utc(t) + '/' + utc(t + 3600e3) + '&details=' + encodeURIComponent(details(a));
+}
+
+function buildIcs(id, a) {   // an event that carries its own reminders, so they work even when this page is closed
+  const t = when(a), trig = ms => ms % 864e5 === 0 ? '-P' + ms / 864e5 + 'D' : ms % 36e5 === 0 ? '-PT' + ms / 36e5 + 'H' : '-PT' + ms / 6e4 + 'M';
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Job Tracker//EN', 'BEGIN:VEVENT',
+    'UID:jobtracker-' + id + '-' + t + '@jobtracker', 'DTSTAMP:' + utc(Date.now()), 'DTSTART:' + utc(t), 'DTEND:' + utc(t + 3600e3),
+    'SUMMARY:' + icsText('Interview: ' + a.company), 'DESCRIPTION:' + icsText(details(a))];
+  REMINDERS.forEach(r => lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsText('Interview in ' + r.label), 'TRIGGER:' + trig(r.ms), 'END:VALARM'));
+  lines.push('END:VEVENT', 'END:VCALENDAR');
+  return lines.map(fold).join('\r\n') + '\r\n';
+}
+
+async function addToCalendar(id) {
+  const a = db.apps[id]; if (!a || !a.interview) return;
+  const name = 'interview-' + (a.company.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'job') + '.ics';
+  const r = await saveFile(name, buildIcs(id, a), 'text/calendar');
+  if (r === 'unsupported') toast('Calendar file not available here', 'This preview cannot save .ics files. Use the Google Calendar link, or open the app from your own website.');
+  else if (r !== 'declined') toast('Calendar file ready', 'Open ' + name + ' to add the interview with reminders 1 day and 1 hour before.');
+}
+
+const calRow = a => when(a) > Date.now()
+  ? `<div class="interview cal"><span>Add to calendar:</span><a class="link" href="${esc(gcalUrl(a))}" target="_blank" rel="noopener noreferrer">Google Calendar</a><button type="button" class="link ics">.ics file</button></div>` : '<div class="interview cal"><span>Add to calendar is only offered for interviews that are still ahead. Use Change to set a new time.</span></div>';
+const extras = a => (a.link ? `<p class="meta"><a href="${esc(a.link)}" target="_blank" rel="noopener noreferrer">View job posting</a></p>` : '') +
+  (a.notes ? `<p class="notes">${esc(a.notes)}</p>` : '');
+
+/* ---------- Sorting and stats ---------- */
+const SORT_LABELS = { added: 'Newest added', interview: 'Interview: soonest first', applied: 'Date applied: newest', company: 'Company: A to Z' };
+const SORTS = {
+  added: (a, b) => b[0] - a[0],
+  interview: (a, b) => {   // upcoming interviews first, soonest at the top, then everything else
+    const x = when(a[1]), y = when(b[1]), now = Date.now(), fx = x > now, fy = y > now;
+    return fx && fy ? x - y : fx ? -1 : fy ? 1 : b[0] - a[0];
+  },
+  applied: (a, b) => b[1].date.localeCompare(a[1].date) || b[0] - a[0],
+  company: (a, b) => a[1].company.localeCompare(b[1].company, undefined, { sensitivity: 'base' })
+};
+
+function renderStats(all) {
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const weeks = [0, 0, 0, 0, 0, 0];   // weeks[0] = the last 7 days, weeks[1] = the 7 days before that, ...
+  all.forEach(a => {
+    const d = Math.max(0, Math.round((t0 - new Date(a.date + 'T00:00:00')) / 864e5));
+    if (d < 42) weeks[Math.floor(d / 7)]++;
+  });
+  $('week').textContent = weeks[0];
+  const reached = all.filter(a => a.status === 'Interviewing' || a.status === 'Offer' || a.interview).length;
+  $('reached').textContent = reached + (all.length ? ' (' + Math.round(reached / all.length * 100) + '%)' : '');
+  const max = Math.max(1, ...weeks);
+  $('weeks').innerHTML = weeks.map((n, w) => {
+    const label = w === 0 ? 'Last 7 days' : w * 7 + ' to ' + (w * 7 + 6) + ' days ago';
+    return `<div class="wk" title="${label}: ${n}"><small>${n}</small><i style="height:${n ? Math.max(4, Math.round(n / max * 36)) : 2}px"></i></div>`;
+  }).reverse().join('');
+}
+
+/* ---------- Actions: add, update status, delete ---------- */
+function addApp(a) { db.apps[db.nextId++] = a; save(); render(); }
+function setStatus(id, s) { if (db.apps[id]) { db.apps[id].status = s; save(); render(); } }
+function removeApp(id) { delete db.apps[id]; if (formEditId === String(id)) endEdit(); save(); render(); }
+
+/* ---------- Screen ---------- */
+function renderSummary(all) {
+  const counts = Object.fromEntries(STATUSES.map(s => [s, 0]));
+  all.forEach(a => counts[a.status]++);
+  $('total').textContent = all.length;
+  $('companies').textContent = new Set(all.map(a => a.company.trim().toLowerCase())).size;
+  $('bar').innerHTML = STATUSES.filter(s => counts[s]).map(s =>
+    `<span style="flex:${counts[s]};background:${colour(s)}" title="${s}: ${counts[s]}"></span>`).join('');
+  $('legend').innerHTML = STATUSES.map(s =>
+    `<li><i style="background:${colour(s)}"></i>${s} ${counts[s]}</li>`).join('');
+}
+
+function renderList(all) {
+  const q = query.trim().toLowerCase();
+  const rows = Object.entries(db.apps)
+    .sort(SORTS[sortBy])
+    .filter(([, a]) => (filter === 'All' || a.status === filter) && a.company.toLowerCase().includes(q));
+
+  $('count').textContent = all.length ? `Showing ${rows.length} of ${all.length}` : '';
+
+  if (!all.length) {
+    $('list').innerHTML = `<div class="empty">Nothing here yet. Add your first application using the form.<br>
+      <button type="button" id="sample">Load sample data</button></div>`;
+    return;
+  }
+  if (!rows.length) { $('list').innerHTML = '<div class="empty">No applications match your search.</div>'; return; }
+
+  $('list').innerHTML = rows.map(([id, a]) => {
+    const detail = a.source ? (a.type === 'Referral' ? 'Referred by ' : 'via ') + esc(a.source) : '';
+    return `<article class="item" data-id="${id}" style="--c:${colour(a.status)}">
+      <div>
+        <h3>${esc(a.company)}</h3>
+        <p class="role">${esc(a.role)}</p>
+        <p class="meta"><span class="chip">${a.type}</span>${detail ? `<span>${detail}</span>` : ''}<span>${fmt(a.date)}</span></p>
+        ${interviewRow(id, a)}
+        ${extras(a)}
+      </div>
+      <div class="actions">
+        <select class="status" aria-label="Status for ${esc(a.company)}">
+          ${STATUSES.map(s => `<option${s === a.status ? ' selected' : ''}>${s}</option>`).join('')}
+        </select>
+        <button type="button" class="edit">Edit</button>
+        <button type="button" class="del">Delete</button>
+      </div>
+    </article>`;
+  }).join('');
+  updateTimers(Date.now());
+}
+
+function render() {
+  const all = Object.values(db.apps);
+  renderSummary(all);
+  renderStats(all);
+  renderList(all);
+  renderNext(Date.now());
+}
+
+/* ---------- Events ---------- */
+let formEditId = null;
+const setType = t => { const r = document.querySelector(`input[name=type][value="${t}"]`); r.checked = true; r.dispatchEvent(new Event('change')); };
+const resetFields = () => ['company', 'role', 'source', 'interview', 'link', 'notes'].forEach(k => { $(k).value = ''; });
+
+function submitForm() {
+  const link = cleanLink($('link').value);
+  const problem = !$('company').value.trim() ? ['Enter the company name.', 'company']
+    : !$('role').value.trim() ? ['Enter the role you applied for.', 'role']
+    : !$('date').value ? ['Choose the date you applied.', 'date']
+    : link === null ? ['Enter a valid link, like https://company.com/jobs/123, or leave it empty.', 'link']
+    : $('interview').validity.badInput ? ['The interview date or time is incomplete. Fill in both the date and the time, or clear it.', 'interview']
+    : null;
+  $('formError').textContent = problem ? problem[0] : '';
+  if (problem) { $(problem[1]).focus(); return; }
+  const interview = $('interview').value;
+  const fields = {
+    company: $('company').value.trim(), role: $('role').value.trim(),
+    type: document.querySelector('input[name=type]:checked').value, source: $('source').value.trim(),
+    date: $('date').value, status: $('status').value, interview, link, notes: $('notes').value.trim()
+  };
+  if (formEditId) {
+    const a = db.apps[formEditId];
+    if (a) {
+      const changed = a.interview !== interview;
+      Object.assign(a, fields);
+      if (changed) a.notified = crossedAt(interview);
+      save(); render();
+      if (changed && interview) askPermission();
+    }
+    endEdit();
+  } else {
+    addApp({ ...fields, notified: crossedAt(interview) });
+    if (interview) askPermission();
+    resetFields();
+    $('company').focus();
+  }
+}
+
+function startEdit(id) {
+  const a = db.apps[id]; if (!a) return;
+  formEditId = id;
+  $('company').value = a.company; $('role').value = a.role; $('source').value = a.source || ''; $('date').value = a.date;
+  $('status').value = a.status; $('interview').value = a.interview || ''; $('link').value = a.link || ''; $('notes').value = a.notes || '';
+  setType(a.type);
+  $('addTitle').textContent = 'Edit application'; $('addBtn').textContent = 'Save changes';
+  $('cancelEdit').hidden = false; $('add').classList.add('editing'); $('formError').textContent = '';
+  $('add').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  $('company').focus({ preventScroll: true });
+}
+
+function endEdit() {
+  formEditId = null;
+  resetFields(); $('status').selectedIndex = 0; setType('Online'); $('date').value = today();
+  $('addTitle').textContent = 'Add an application'; $('addBtn').textContent = 'Add application';
+  $('cancelEdit').hidden = true; $('add').classList.remove('editing'); $('formError').textContent = '';
+}
+$('cancelEdit').addEventListener('click', endEdit);
+$('addBtn').addEventListener('click', submitForm);
+$('add').addEventListener('keydown', e => {   // Enter in a text box adds the application
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'radio') { e.preventDefault(); submitForm(); }
+});
+
+document.querySelectorAll('input[name=type]').forEach(r => r.addEventListener('change', () => {
+  const ref = r.value === 'Referral' && r.checked;
+  if (!r.checked) return;
+  $('sourceLabel').textContent = ref ? 'Referred by' : 'Portal or website';
+  $('source').placeholder = ref ? 'Name of the person' : 'LinkedIn, Naukri, company site';
+}));
+
+$('q').addEventListener('input', e => { query = e.target.value; renderList(Object.values(db.apps)); });
+$('filter').addEventListener('change', e => { filter = e.target.value; renderList(Object.values(db.apps)); });
+
+$('list').addEventListener('change', e => {
+  if (e.target.classList.contains('status')) setStatus(e.target.closest('.item').dataset.id, e.target.value);
+});
+
+$('list').addEventListener('click', e => {
+  const btn = e.target.closest('.del');
+  if (btn) {
+    if (btn.dataset.armed) { removeApp(btn.closest('.item').dataset.id); return; }
+    btn.dataset.armed = '1'; btn.textContent = 'Confirm delete';
+    setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = 'Delete'; } }, 3000);
+  }
+  if (e.target.id === 'sample') {
+    addApp({ company: 'Infosys', role: 'Java Developer Trainee', type: 'Online', source: 'Naukri', date: today(), status: 'Applied' });
+    addApp({ company: 'Wipro', role: 'Junior Software Engineer', type: 'Referral', source: 'A senior from college', date: today(), status: 'Interviewing' });
+  }
+});
+
+/* ---------- Backup: export to a file, import from a file ---------- */
+const backupMsg = t => { $('backupMsg').textContent = t; };
+
+async function exportBackup() {
+  if (!Object.keys(db.apps).length) { backupMsg('Nothing to export yet. Add an application first.'); return; }
+  const text = JSON.stringify({ app: 'jobtracker', version: 1, exportedAt: new Date().toISOString(), data: db }, null, 2);
+  const name = 'job-tracker-backup-' + today() + '.json';
+  const r = await saveFile(name, text, 'application/json');
+  if (r === 'saved') backupMsg('Backup saved.');
+  else if (r === 'downloaded') backupMsg('Backup downloaded. Look for ' + name + ' in your Downloads folder.');
+  else if (r === 'unsupported') backupMsg('This view cannot save files.');
+}
+
+const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
+const isDateTime = v => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v || '');
+const keyOf = a => [a.type, a.company.toLowerCase(), a.role.toLowerCase(), a.date].join('|');
+
+// A backup file is untrusted input: check every field before it goes into the list
+function cleanApp(a) {
+  if (!a || typeof a.company !== 'string' || typeof a.role !== 'string' || !a.company.trim() || !a.role.trim() || !isDate(a.date)) return null;
+  const interview = isDateTime(a.interview) ? a.interview : '';
+  return {
+    company: a.company.trim().slice(0, 100), role: a.role.trim().slice(0, 100),
+    type: a.type === 'Referral' ? 'Referral' : 'Online', source: String(a.source || '').trim().slice(0, 100),
+    date: a.date, status: STATUSES.includes(a.status) ? a.status : 'Applied',
+    interview, notified: crossedAt(interview),
+    link: cleanLink(a.link) || '', notes: String(a.notes || '').trim().slice(0, 500)
+  };
+}
+
+async function importBackup(file) {
+  if (file.size > 5e6) { backupMsg('That file is too large to be a Job Tracker backup.'); return; }
+  let list;
+  try {
+    const parsed = JSON.parse(await file.text());
+    const apps = (parsed.data || parsed).apps;
+    list = Object.entries(apps).sort((x, y) => x[0] - y[0]).map(e => e[1]);
+  } catch (e) { backupMsg("That file isn't a Job Tracker backup."); return; }
+  // Merge: nothing you already have is removed, and applications already in the list are skipped
+  const have = new Set(Object.values(db.apps).map(keyOf));
+  let added = 0, skipped = 0;
+  for (const raw of list) {
+    const a = cleanApp(raw);
+    if (!a || have.has(keyOf(a))) { skipped++; continue; }
+    db.apps[db.nextId++] = a; have.add(keyOf(a)); added++;
+  }
+  save(); render();
+  backupMsg(`Imported ${added} application${added === 1 ? '' : 's'}` + (skipped ? `, skipped ${skipped} already in your list or not valid.` : '.'));
+}
+
+$('export').addEventListener('click', exportBackup);
+$('import').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importBackup(f); });
+
+/* Interview buttons inside each application */
+$('list').addEventListener('click', e => {
+  const t = e.target.closest('button'), item = t && t.closest('.item');
+  if (!item) return;
+  const id = item.dataset.id, a = db.apps[id];
+  if (t.classList.contains('set-int')) {
+    editingId = id; render();
+    const inp = document.querySelector(`.item[data-id="${id}"] .int-input`); if (inp) inp.focus();
+  } else if (t.classList.contains('cancel-int')) {
+    editingId = null; render();
+  } else if (t.classList.contains('save-int')) {
+    const inp = item.querySelector('.int-input');
+    if (!inp.value) { inp.focus(); return; }
+    a.interview = inp.value; a.notified = crossedAt(inp.value);
+    editingId = null; save(); render(); askPermission();
+  } else if (t.classList.contains('ics')) {
+    addToCalendar(id);
+  } else if (t.classList.contains('edit')) {
+    startEdit(id);
+  } else if (t.classList.contains('clear-int')) {
+    a.interview = ''; a.notified = []; save(); render();
+  }
+});
+$('notifyBar').addEventListener('click', e => { if (e.target.id === 'enableNotify') askPermission(); });
+
+/* ---------- Start ---------- */
+$('status').innerHTML = STATUSES.map(s => `<option>${s}</option>`).join('');
+$('filter').innerHTML = ['All', ...STATUSES].map(s => `<option value="${s}">${s === 'All' ? 'All statuses' : s}</option>`).join('');
+$('date').value = today();
+$('sort').innerHTML = Object.entries(SORT_LABELS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+$('sort').addEventListener('change', e => { sortBy = e.target.value; renderList(Object.values(db.apps)); });
+load();
+render();
+renderNotifyBar();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
