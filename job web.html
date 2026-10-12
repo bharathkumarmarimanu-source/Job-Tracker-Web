@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Job Application Tracker | Bharath Kumar Marrimanu</title>
+  <meta name="description" content="A menu-driven core Java console app for tracking job applications.">
+
+  <style>
+/* ---------- Colours and fonts live here, so you can change them in one place ---------- */
+:root {
+  --page: #f2f4f7;       /* page background */
+  --ink: #1b2430;        /* main text */
+  --muted: #566170;      /* secondary text */
+  --line: #d3d9e0;       /* borders */
+  --panel: #1e2a38;      /* console background */
+  --amber: #e8a33d;      /* console text and accents */
+  --link: #0f5a8a;       /* links and buttons */
+
+  --font-text: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-code: Consolas, "Courier New", monospace;
+}
+
+/* ---------- Base ---------- */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+h1, h2, h3 { line-height: 1.15; margin: 0; }
+p { margin: 0 0 1rem; max-width: 62ch; }
+a { color: var(--link); }
+
+code, pre { font-family: var(--font-code); }
+code {
+  font-size: 0.9em;
+  background: #e4e9ef;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
+
+/* Keeps content centred and readable on wide screens */
+.hero, main, footer {
+  width: min(1060px, 100% - 2.5rem);
+  margin-inline: auto;
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+  padding: 4.5rem 0 3.5rem;
+}
+
+.author { color: var(--muted); font-weight: 500; margin-bottom: 0.75rem; }
+
+h1 {
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.25rem;
+}
+
+.lead { font-size: 1.2rem; margin-bottom: 1.75rem; }
+
+.button {
+  display: inline-block;
+  background: var(--link);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  padding: 0.8rem 1.4rem;
+  border-radius: 8px;
+}
+.button:hover { background: #0b4468; }
+
+/* ---------- Console window ---------- */
+.console {
+  background: var(--panel);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(27, 36, 48, 0.25);
+}
+
+.console-bar {
+  background: #162029;
+  color: #9aa7b5;
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  padding: 0.55rem 1rem;
+}
+
+.console pre {
+  margin: 0;
+  padding: 1.4rem 1.25rem 1.6rem;
+  color: var(--amber);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+/* The blinking cursor: the one moving thing on the page */
+.cursor {
+  display: inline-block;
+  width: 0.6em;
+  height: 1.1em;
+  background: var(--amber);
+  vertical-align: text-bottom;
+  animation: blink 1.1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---------- Sections ---------- */
+section { padding: 2.75rem 0; border-top: 1px solid var(--line); }
+h2 { font-size: 1.8rem; margin-bottom: 1.5rem; }
+h3 { font-size: 1.15rem; margin-bottom: 0.5rem; }
+
+/* What it does */
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem 3rem;
+  margin: 0;
+}
+.features dt { font-weight: 700; }
+.features dd { margin: 0.15rem 0 0; color: var(--muted); }
+
+/* How it is built */
+.build {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+.tree {
+  background: #e4e9ef;
+  border-left: 4px solid var(--amber);
+  border-radius: 0 6px 6px 0;
+  padding: 0.9rem 1.1rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  width: fit-content;
+}
+
+.note { color: var(--muted); font-style: italic; margin: 0; }
+
+/* Built with */
+.tags { list-style: none; display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0; padding: 0; }
+.tags li {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.95rem;
+}
+
+/* ---------- Footer ---------- */
+footer {
+  border-top: 1px solid var(--line);
+  padding: 2rem 0 3rem;
+  color: var(--muted);
+}
+.links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin: 0; }
+
+/* ---------- Phones and small tablets ---------- */
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; gap: 2rem; padding-top: 2.5rem; }
+  .features, .build { grid-template-columns: 1fr; gap: 1.25rem; }
+}
+
+/* Respect people who turn animations off */
+@media (prefers-reduced-motion: reduce) {
+  .cursor { animation: none; }
+}
+</style>
+</head>
+<body>
+
+  <header class="hero">
+    <div class="hero-text">
+      <p class="author">Bharath Kumar Marrimanu</p>
+      <h1>Job Application Tracker</h1>
+      <p class="lead">
+        A menu-driven console app, written in core Java, that keeps track of
+        the jobs I have applied to: add them, update their status, and search
+        by company.
+      </p>
+      <a class="button" href="https://github.com/bharathkumarmarimanu-source/Job-Tracker">View the code on GitHub</a>
+    </div>
+
+    <!-- Replace this menu text with your program's exact output -->
+    <div class="console" role="img" aria-label="The app's main menu in a console window">
+      <div class="console-bar">Console</div>
+<pre>JOB APPLICATION TRACKER
+
+1. Add application
+2. View all applications
+3. Update status
+4. Delete application
+5. Search by company
+6. Summary
+7. Exit
+
+Enter your choice: <span class="cursor"></span></pre>
+    </div>
+  </header>
+
+  <main>
+
+    <section>
+      <h2>What it does</h2>
+      <dl class="features">
+        <div>
+          <dt>Add</dt>
+          <dd>Save a new application as either a referral or an online application.</dd>
+        </div>
+        <div>
+          <dt>View</dt>
+          <dd>List every application you have saved.</dd>
+        </div>
+        <div>
+          <dt>Update status</dt>
+          <dd>Change where an application stands as you hear back.</dd>
+        </div>
+        <div>
+          <dt>Delete</dt>
+          <dd>Remove an application you no longer need.</dd>
+        </div>
+        <div>
+          <dt>Search</dt>
+          <dd>Find applications by company name.</dd>
+        </div>
+        <div>
+          <dt>Summary</dt>
+          <dd>See an overview of all your applications at a glance.</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section>
+      <h2>How it is built</h2>
+
+      <div class="build">
+        <div>
+          <h3>Object-oriented design</h3>
+          <p>
+            <code>JobApplication</code> is the base class. <code>Referral</code>
+            and <code>Online</code> extend it, so the two kinds of application
+            share one common structure.
+          </p>
+<pre class="tree">JobApplication
+├── Referral
+└── Online</pre>
+        </div>
+
+        <div>
+          <h3>Collections</h3>
+          <p>
+            A <code>HashMap</code>, keyed by application ID, makes it quick to
+            find, update, or delete a single application. A <code>HashSet</code>
+            keeps each company in the list only once.
+          </p>
+        </div>
+      </div>
+
+      <p class="note">
+        Data is held in memory only, so the list resets when the program closes.
+      </p>
+    </section>
+
+    <section>
+      <h2>Built with</h2>
+      <ul class="tags">
+        <li>Core Java</li>
+        <li>OOP</li>
+        <li>HashMap</li>
+        <li>HashSet</li>
+        <li>Eclipse</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Built by Bharath Kumar Marrimanu, B.Tech ECE graduate, learning Java full stack.</p>
+    <p class="links">
+      <a href="https://github.com/bharathkumarmarimanu-source/Job-Tracker">Project repository</a>
+      <a href="https://github.com/bharathkumarmarimanu-source">GitHub profile</a>
+      <a href="https://www.linkedin.com/in/bharathkumarmarrimanu">LinkedIn</a>
+    </p>
+  </footer>
+
+</body>
+</html>
