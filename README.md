@@ -4,7 +4,7 @@ A personal tool to keep track of the jobs you have applied to: what you applied 
 
 It started as a core Java console application and grew into a responsive web app. Both versions are in this repository.
 
-**Live demo:** https://bharathkumarmarimanu-source.github.io/Job-Tracker/
+**Live demo:** file:///C:/Users/bhara/Downloads/Job%20Tracker.html/
 
 <!-- Add screenshots to a screenshots/ folder, then remove the comment markers around the line below.
 ![Job Tracker web app](screenshots/app.png)
